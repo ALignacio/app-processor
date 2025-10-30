@@ -31,7 +31,9 @@ async def process_image(file: UploadFile = File(...), operation: str = Form(...)
         return JSONResponse(content={"error": "Invalid image"}, status_code=400)
 
     # Image operations
-    if operation == "grayscale":
+    if operation == "original":
+        processed = img.copy()
+    elif operation == "grayscale":
         processed = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     elif operation == "blur":
         processed = cv2.GaussianBlur(img, (15, 15), 0)

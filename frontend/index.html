@@ -6,35 +6,42 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Electron + FastAPI Image Processing</h1>
-
-  <div class="container">
-    <div class="control-panel">
-      <label class="file-input-wrapper">
-        <input type="file" id="fileInput" multiple accept="image/*" />
-        <span class="file-input-label">Choose Image</span>
-      </label>
-
-      <select id="operation" aria-label="Select image processing operation">
-        <option value="grayscale">Grayscale</option>
-        <option value="blur">Blur</option>
-        <option value="edge">Edge Detection</option>
-        <option value="threshold">Thresholding</option>
-        <option value="resize">Resize</option>
-        <option value="rotate">Rotate</option>
-        <option value="flip">Flip</option>
-        <option value="lighten">Lighten</option>
-        <option value="darken">Darken</option>
-        <option value="hue">Hue Shift</option>
-      </select>
-
-      <button id="processBtn">Process Image</button>
-      <button id="exportPdfBtn" style="display:none;">Generate PDF Report</button>
+  <div class="app-container">
+    <div class="toolbar">
+      <h1>Image Processing App</h1>
     </div>
 
-    <div id="results" class="preview empty-state">
-      <p>Select images and an operation, then click "Process Images" to see results.</p>
+    <div class="workspace">
+      <div class="sidebar">
+        <div class="filters-panel">
+          <h3>Filters</h3>
+          <select id="operation" aria-label="Select image processing operation">
+            <option value="original">Original</option>
+            <option value="grayscale">Grayscale</option>
+            <option value="blur">Blur</option>
+            <option value="edge">Edge Detection</option>
+            <option value="threshold">Thresholding</option>
+            <option value="resize">Resize</option>
+            <option value="rotate">Rotate</option>
+            <option value="flip">Flip</option>
+            <option value="lighten">Lighten</option>
+            <option value="darken">Darken</option>
+            <option value="hue">Hue Shift</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div id="results" class="image-workspace empty-state">
+          <label class="drop-zone">
+            <input type="file" id="fileInput" multiple accept="image/*" />
+            <p>Open an image to begin editing</p>
+          </label>
+        </div>
+      </div>
     </div>
+
+    <button id="exportPdfBtn" class="floating-export-btn" style="display:none;">Export PDF</button>
 
     <div id="pdfPreview" style="display:none; margin-top: 2rem;">
       <h2>PDF Report Preview</h2>

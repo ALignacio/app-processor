@@ -11,10 +11,8 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "devDependencies": {
-    "electron": "^38.1.2"
-  },
   "dependencies": {
+    "electron": "^38.1.2",
     "jspdf": "^3.0.3"
   }
 }
