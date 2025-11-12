@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+import json
 import cv2
 import numpy as np
 import base64
@@ -22,52 +23,73 @@ def cv2_to_base64(img):
     return base64.b64encode(buffer).decode("utf-8")
 
 @app.post("/process")
-async def process_image(file: UploadFile = File(...), operation: str = Form(...)):
+async def process_image(file: UploadFile = File(...), operations: str = Form(...)):
+    print(f"Processing image with operations: {operations}")
     contents = await file.read()
     npimg = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
     if img is None:
         return JSONResponse(content={"error": "Invalid image"}, status_code=400)
+    
+    processed = img.copy()
+    op_list = json.loads(operations)
 
-    # Image operations
-    if operation == "original":
-        processed = img.copy()
-    elif operation == "grayscale":
-        processed = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    elif operation == "blur":
-        processed = cv2.GaussianBlur(img, (15, 15), 0)
-    elif operation == "edge":
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        processed = cv2.Canny(gray, 100, 200)
-    elif operation == "threshold":
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        _, processed = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-    elif operation == "resize":
-        processed = cv2.resize(img, (200, 200))
-    elif operation == "rotate":
-        (h, w) = img.shape[:2]
-        M = cv2.getRotationMatrix2D((w // 2, h // 2), 45, 1.0)
-        processed = cv2.warpAffine(img, M, (w, h))
-    elif operation == "flip":
-        processed = cv2.flip(img, 1)
-    elif operation == "lighten":
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        hsv[:, :, 2] = cv2.convertScaleAbs(hsv[:, :, 2], alpha=1.2, beta=50)
-        processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    elif operation == "darken":
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        hsv[:, :, 2] = cv2.convertScaleAbs(hsv[:, :, 2], alpha=0.8, beta=-30)
-        processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    elif operation == "hue":
-        # Ensure 3 channels before converting
-        if len(img.shape) == 2:
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        hsv[:, :, 0] = (hsv[:, :, 0] + 30) % 180  # auto hue shift
-        processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    else:
-        return JSONResponse(content={"error": "Unknown operation"}, status_code=400)
+    for op in op_list:
+        operation = op.get("name")
+        value = op.get("value")
+
+        # Ensure image is BGR for color operations
+        if operation in ["lighten", "darken", "hue"] and len(processed.shape) == 2:
+            processed = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
+
+        # Ensure image is grayscale for certain operations
+        if operation in ["threshold", "edge"] and len(processed.shape) == 3:
+            processed = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
+
+        if operation == "grayscale":
+            if len(processed.shape) == 3: # only if it's not already grayscale
+                processed = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
+        elif operation == "blur":
+            if len(processed.shape) == 2:
+                processed = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
+            blur_value = int(value) if value is not None and value > 0 else 15
+            if blur_value % 2 == 0:
+                blur_value += 1
+            processed = cv2.GaussianBlur(processed, (blur_value, blur_value), 0)
+        elif operation == "edge":
+            processed = cv2.Canny(processed, 100, 200)
+        elif operation == "threshold":
+            _, processed = cv2.threshold(processed, 127, 255, cv2.THRESH_BINARY)
+        elif operation == "resize":
+            processed = cv2.resize(processed, (200, 200))
+        elif operation == "rotate":
+            (h, w) = processed.shape[:2]
+            angle = float(value) if value is not None else 90
+            M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
+            processed = cv2.warpAffine(processed, M, (w, h))
+        elif operation == "flip":
+            processed = cv2.flip(processed, 1)
+        elif operation == "lighten":
+            value = int(value) if value is not None else 50
+            hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
+            h, s, v = cv2.split(hsv)
+            v = cv2.add(v, value)
+            final_hsv = cv2.merge((h, s, v))
+            processed = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+        elif operation == "darken":
+            value = int(value) if value is not None else 50
+            hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
+            h, s, v = cv2.split(hsv)
+            v = cv2.subtract(v, value)
+            final_hsv = cv2.merge((h, s, v))
+            processed = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+        elif operation == "hue":
+            hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
+            hsv[:, :, 0] = (hsv[:, :, 0] + 30) % 180
+            processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        elif operation != "original":
+            return JSONResponse(content={"error": f"Unknown operation: {operation}"}, status_code=400)
 
     original_base64 = cv2_to_base64(img)
     processed_base64 = cv2_to_base64(processed)

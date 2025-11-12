@@ -6,29 +6,31 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app-container">
+  <div class="app-container">      
     <div class="toolbar">
       <h1>Image Processing App</h1>
     </div>
 
     <div class="workspace">
       <div class="sidebar">
-        <div class="filters-panel">
-          <h3>Filters</h3>
-          <select id="operation" aria-label="Select image processing operation">
-            <option value="original">Original</option>
-            <option value="grayscale">Grayscale</option>
-            <option value="blur">Blur</option>
-            <option value="edge">Edge Detection</option>
-            <option value="threshold">Thresholding</option>
-            <option value="resize">Resize</option>
-            <option value="rotate">Rotate</option>
-            <option value="flip">Flip</option>
-            <option value="lighten">Lighten</option>
-            <option value="darken">Darken</option>
-            <option value="hue">Hue Shift</option>
-          </select>
+        <h3>Global Controls</h3>
+        <div id="global-lighten-controls" class="filter-controls" style="display:none;">
+          <label for="global-lighten-slider">Lighten All:</label>
+          <input type="range" id="global-lighten-slider" min="0" max="100" value="50">
+          <span id="global-lighten-value">50</span>
         </div>
+        <div id="global-darken-controls" class="filter-controls" style="display:none;">
+          <label for="global-darken-slider">Darken All:</label>
+          <input type="range" id="global-darken-slider" min="0" max="100" value="50">
+          <span id="global-darken-value">50</span>
+        </div>
+        <div id="global-rotate-controls" class="filter-controls" style="display:none;">
+          <label for="global-rotate-slider">Rotate All:</label>
+          <input type="range" id="global-rotate-slider" min="0" max="360" value="90">
+          <span id="global-rotate-value">90</span>
+        </div>
+        <button id="deleteAllBtn" style="display:none;">Delete All</button>
+        <button id="addImageBtn" style="display:none;">Add Image</button>
       </div>
 
       <div class="main-content">
@@ -45,10 +47,12 @@
 
     <div id="pdfPreview" style="display:none; margin-top: 2rem;">
       <h2>PDF Report Preview</h2>
+      <button id="exitPdfPreviewBtn">Exit Preview</button>
       <iframe id="pdfFrame" width="100%" height="600px" style="border: 1px solid #ccc;"></iframe>
       <button id="downloadPdfBtn" style="margin-top: 1rem;">Download PDF</button>
     </div>
   </div>
+
 
   <script src="renderer.js"></script>
 </body>

@@ -6,7 +6,7 @@ function createWindow() {
     width: 900,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, "frontend", "renderer.js"),
+
       nodeIntegration: true,
       contextIsolation: false,
     },
