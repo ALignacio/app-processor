@@ -1,10 +1,11 @@
 const { jsPDF } = require('jspdf');
 
-let fileInput = document.getElementById("fileInput");
+const fileInput = document.getElementById("fileInput");
 const resultsDiv = document.getElementById("results");
 const exportPdfBtn = document.getElementById("exportPdfBtn");
 const addImageBtn = document.getElementById("addImageBtn");
 const deleteAllBtn = document.getElementById("deleteAllBtn");
+const clearAllFiltersBtn = document.getElementById("clearAllFiltersBtn");
 
 const globalLightenSlider = document.getElementById('global-lighten-slider');
 const globalLightenValue = document.getElementById('global-lighten-value');
@@ -16,6 +17,17 @@ const globalRotateValue = document.getElementById('global-rotate-value');
 const globalLightenControls = document.getElementById('global-lighten-controls');
 const globalDarkenControls = document.getElementById('global-darken-controls');
 const globalRotateControls = document.getElementById('global-rotate-controls');
+
+const globalBlurSlider = document.getElementById('global-blur-slider');
+const globalBlurValue = document.getElementById('global-blur-value');
+const globalThresholdSlider = document.getElementById('global-threshold-slider');
+const globalThresholdValue = document.getElementById('global-threshold-value');
+const globalHueshiftSlider = document.getElementById('global-hueshift-slider');
+const globalHueshiftValue = document.getElementById('global-hueshift-value');
+
+const globalBlurControls = document.getElementById('global-blur-controls');
+const globalThresholdControls = document.getElementById('global-threshold-controls');
+const globalHueshiftControls = document.getElementById('global-hueshift-controls');
 
 let currentImages = [];
 
@@ -132,7 +144,18 @@ function createImageCard(file, originalBase64) {
   // Filter checkboxes for this image
   const cardFiltersContainer = document.createElement("div");
   cardFiltersContainer.className = "filters-container";
-  cardFiltersContainer.innerHTML = document.getElementById("filters-container").innerHTML; // Copy global filters
+  cardFiltersContainer.innerHTML = `
+    <label><input type="checkbox" class="filter-checkbox" value="rotate"> Rotate</label>
+    <label><input type="checkbox" class="filter-checkbox" value="lighten"> Lighten</label>
+    <label><input type="checkbox" class="filter-checkbox" value="darken"> Darken</label>
+    <label><input type="checkbox" class="filter-checkbox" value="blur"> Blur</label>
+    <label><input type="checkbox" class="filter-checkbox" value="threshold"> Thresholding</label>
+    <label><input type="checkbox" class="filter-checkbox" value="hueshift"> Hue Shift</label>
+    <label><input type="checkbox" class="filter-checkbox" value="flip"> Flip</label>
+    <label><input type="checkbox" class="filter-checkbox" value="resize"> Resize</label>
+    <label><input type="checkbox" class="filter-checkbox" value="edge_detection"> Edge Detection</label>
+    <label><input type="checkbox" class="filter-checkbox" value="grayscale"> Grayscale</label>
+  `;
   
   const clearFiltersBtn = document.createElement("button");
   clearFiltersBtn.textContent = "Clear Filters";
@@ -187,6 +210,56 @@ function createImageCard(file, originalBase64) {
   `;
   slidersContainer.appendChild(blurControls);
 
+  // Threshold slider
+  const thresholdControls = document.createElement("div");
+  thresholdControls.className = "filter-controls threshold-controls";
+  thresholdControls.style.display = "none";
+  thresholdControls.innerHTML = `
+    <label for="threshold-slider-${file.name}">Threshold:</label>
+    <input type="range" id="threshold-slider-${file.name}" min="0" max="255" value="127">
+    <span class="threshold-value">127</span>
+  `;
+  slidersContainer.appendChild(thresholdControls);
+
+  // Hue Shift slider
+  const hueshiftControls = document.createElement("div");
+  hueshiftControls.className = "filter-controls hueshift-controls";
+  hueshiftControls.style.display = "none";
+  hueshiftControls.innerHTML = `
+    <label for="hueshift-slider-${file.name}">Hue:</label>
+    <input type="range" id="hueshift-slider-${file.name}" min="0" max="360" value="180">
+    <span class="hueshift-value">180</span>
+  `;
+  slidersContainer.appendChild(hueshiftControls);
+
+  // Flip dropdown
+  const flipControls = document.createElement("div");
+  flipControls.className = "filter-controls flip-controls";
+  flipControls.style.display = "none";
+  flipControls.innerHTML = `
+    <label for="flip-select-${file.name}">Direction:</label>
+    <select id="flip-select-${file.name}">
+      <option value="horizontal">Horizontal</option>
+      <option value="vertical">Vertical</option>
+    </select>
+  `;
+  slidersContainer.appendChild(flipControls);
+
+  // Resize inputs
+  const resizeControls = document.createElement("div");
+  resizeControls.className = "filter-controls resize-controls";
+  resizeControls.style.display = "none";
+  resizeControls.innerHTML = `
+    <label>Width:</label>
+    <input type="number" class="resize-width-input" value="100" style="width: 60px;">
+    <label>Height:</label>
+    <input type="number" class="resize-height-input" value="100" style="width: 60px;">
+  `;
+  slidersContainer.appendChild(resizeControls);
+
+  // Edge Detection (no controls needed)
+  // Grayscale (no controls needed)
+
   // Download buttons container
   const buttonsContainer = document.createElement("div");
   buttonsContainer.className = "buttons-container";
@@ -222,16 +295,16 @@ function createImageCard(file, originalBase64) {
       globalLightenControls.style.display = 'none';
       globalDarkenControls.style.display = 'none';
       globalRotateControls.style.display = 'none';
+      globalBlurControls.style.display = 'none';
+      globalThresholdControls.style.display = 'none';
+      globalHueshiftControls.style.display = 'none';
       
       resultsDiv.classList.add("empty-state");
       resultsDiv.innerHTML = `
-        <label class="drop-zone">
-          <input type="file" id="fileInput" multiple accept="image/*" />
+        <label for="fileInput" class="drop-zone">
           <p>Open an image to begin editing</p>
         </label>
       `;
-      fileInput = document.getElementById("fileInput");
-      fileInput.addEventListener("change", handleFileInputChange);
     }
   });
 
@@ -265,6 +338,10 @@ function createImageCard(file, originalBase64) {
     lightenControls.style.display = selectedFilters.includes('lighten') ? 'block' : 'none';
     darkenControls.style.display = selectedFilters.includes('darken') ? 'block' : 'none';
     blurControls.style.display = selectedFilters.includes('blur') ? 'block' : 'none';
+    card.querySelector('.threshold-controls').style.display = selectedFilters.includes('threshold') ? 'block' : 'none';
+    card.querySelector('.hueshift-controls').style.display = selectedFilters.includes('hueshift') ? 'block' : 'none';
+    card.querySelector('.flip-controls').style.display = selectedFilters.includes('flip') ? 'block' : 'none';
+    card.querySelector('.resize-controls').style.display = selectedFilters.includes('resize') ? 'block' : 'none';
 
     // Update value for the active filter
     currentFilters.forEach(filter => {
@@ -276,6 +353,16 @@ function createImageCard(file, originalBase64) {
         filter.value = card.querySelector('.darken-controls input').value;
       } else if (filter.name === 'blur') {
         filter.value = card.querySelector('.blur-controls input').value;
+      } else if (filter.name === 'threshold') {
+        filter.value = card.querySelector('.threshold-controls input').value;
+      } else if (filter.name === 'hueshift') {
+        filter.value = card.querySelector('.hueshift-controls input').value;
+      } else if (filter.name === 'flip') {
+        filter.value = card.querySelector('.flip-controls select').value;
+      } else if (filter.name === 'resize') {
+        const width = card.querySelector('.resize-controls .resize-width-input').value;
+        const height = card.querySelector('.resize-controls .resize-height-input').value;
+        filter.value = { width: parseInt(width, 10) || 0, height: parseInt(height, 10) || 0 };
       }
     });
     
@@ -304,7 +391,6 @@ function createImageCard(file, originalBase64) {
     loadingIndicator.style.display = "none";
   };
 
-  // Add event listener for filter changes
   card.querySelectorAll('.filter-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', applyFilters);
   });
@@ -339,6 +425,50 @@ function createImageCard(file, originalBase64) {
     card.querySelector('.blur-value').textContent = e.target.value;
     debouncedApplyFilters(e);
   });
+
+  // Add event listeners for new sliders
+  const thresholdInput = card.querySelector('.threshold-controls input');
+  if (thresholdInput) {
+    thresholdInput.addEventListener('input', (e) => {
+      const thresholdValue = card.querySelector('.threshold-value');
+      if (thresholdValue) {
+        thresholdValue.textContent = e.target.value;
+      }
+      debouncedApplyFilters(e);
+    });
+  }
+
+  const hueshiftInput = card.querySelector('.hueshift-controls input');
+  if (hueshiftInput) {
+    hueshiftInput.addEventListener('input', (e) => {
+      const hueshiftValue = card.querySelector('.hueshift-value');
+      if (hueshiftValue) {
+        hueshiftValue.textContent = e.target.value;
+      }
+      debouncedApplyFilters(e);
+    });
+  }
+
+  const flipSelect = card.querySelector('.flip-controls select');
+  if (flipSelect) {
+    flipSelect.addEventListener('change', (e) => {
+      debouncedApplyFilters(e);
+    });
+  }
+
+  const resizeWidthInput = card.querySelector('.resize-controls .resize-width-input');
+  if (resizeWidthInput) {
+    resizeWidthInput.addEventListener('input', (e) => {
+      debouncedApplyFilters(e);
+    });
+  }
+
+  const resizeHeightInput = card.querySelector('.resize-controls .resize-height-input');
+  if (resizeHeightInput) {
+    resizeHeightInput.addEventListener('input', (e) => {
+      debouncedApplyFilters(e);
+    });
+  }
 
 
   // Set up download buttons
@@ -385,11 +515,17 @@ async function handleFileInputChange(event) {
   if (files.length > 0) {
     resultsDiv.classList.remove("empty-state");
     if (currentImages.length === 0) {
-      resultsDiv.innerHTML = ''; // Clear the "Open an image" message
+      const dropZone = resultsDiv.querySelector('.drop-zone');
+      if (dropZone) {
+        dropZone.remove();
+      }
     }
     globalLightenControls.style.display = 'block';
     globalDarkenControls.style.display = 'block';
     globalRotateControls.style.display = 'block';
+    globalBlurControls.style.display = 'block';
+    globalThresholdControls.style.display = 'block';
+    globalHueshiftControls.style.display = 'block';
   } else {
     // This happens when the user cancels the file dialog.
     // We don't need to do anything, the UI should stay as it is.
@@ -407,13 +543,14 @@ async function handleFileInputChange(event) {
   exportPdfBtn.style.display = hasImages ? "inline" : "none";
   deleteAllBtn.style.display = hasImages ? "block" : "none";
   addImageBtn.style.display = hasImages ? "block" : "none";
+  clearAllFiltersBtn.style.display = hasImages ? "block" : "none";
+  event.target.value = "";
 }
 
 deleteAllBtn.addEventListener("click", () => {
   currentImages = [];
   resultsDiv.innerHTML = `
-    <label class="drop-zone">
-      <input type="file" id="fileInput" multiple accept="image/*" />
+    <label for="fileInput" class="drop-zone">
       <p>Open an image to begin editing</p>
     </label>
   `;
@@ -421,29 +558,12 @@ deleteAllBtn.addEventListener("click", () => {
   exportPdfBtn.style.display = "none";
   deleteAllBtn.style.display = "none";
   addImageBtn.style.display = "none";
+  clearAllFiltersBtn.style.display = "none";
 
   // Hide global controls
   globalLightenControls.style.display = 'none';
   globalDarkenControls.style.display = 'none';
   globalRotateControls.style.display = 'none';
-
-  fileInput = document.getElementById("fileInput");
-  fileInput.addEventListener("change", handleFileInputChange);
-});
-
-// Handle global filter changes
-document.querySelectorAll('#filters-container .filter-checkbox').forEach(checkbox => {
-  checkbox.addEventListener('change', (e) => {
-    const filterType = e.target.value;
-    const isChecked = e.target.checked;
-    document.querySelectorAll('.image-card').forEach(card => {
-      const cardCheckbox = card.querySelector(`.filter-checkbox[value="${filterType}"]`);
-      if (cardCheckbox) {
-        cardCheckbox.checked = isChecked;
-        cardCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-  });
 });
 
 // Handle PDF export
@@ -466,8 +586,18 @@ exportPdfBtn.addEventListener("click", async () => {
 
       doc.text(`Image: ${fileName}`, 10, 10);
       doc.text("Original Image", 10, 20);
-      const appliedFilters = filters.map(f => f.name).join(', ');
-      doc.text(`Processed Image (${appliedFilters})`, 105, 20);
+      
+      const appliedFilters = filters.map(f => {
+        if (f.value) {
+          if (typeof f.value === 'object') {
+            return `${f.name}: ${JSON.stringify(f.value)}`;
+          }
+          return `${f.name}: ${f.value}`;
+        }
+        return f.name;
+      }).join(', ');
+
+      doc.text(`Processed Image`, 105, 20);
 
       try {
         // Calculate aspect ratio for original image
@@ -477,6 +607,22 @@ exportPdfBtn.addEventListener("click", async () => {
         // Calculate aspect ratio for processed image
         const procHeight = (processedImg.naturalHeight * 85) / processedImg.naturalWidth;
         doc.addImage(processedImg.src, 'PNG', 105, 30, 85, procHeight);
+
+        // Add filter details
+        let filterY = 30 + Math.max(origHeight, procHeight) + 10;
+        doc.text("Applied Filters:", 10, filterY);
+        filters.forEach(filter => {
+          filterY += 7;
+          let filterText = `- ${filter.name}`;
+          if (filter.value) {
+            if (typeof filter.value === 'object') {
+              filterText += `: ${JSON.stringify(filter.value)}`;
+            } else {
+              filterText += `: ${filter.value}`;
+            }
+          }
+          doc.text(filterText, 15, filterY);
+        });
 
         imageCount++;
       } catch (e) {
@@ -523,21 +669,21 @@ exitPdfPreviewBtn.addEventListener("click", () => {
   pdfPreview.style.display = "none";
 });
 
-fileInput.addEventListener("change", handleFileInputChange);
-
-addImageBtn.addEventListener("click", () => {
-  const tempInput = document.createElement('input');
-  tempInput.type = 'file';
-  tempInput.multiple = true;
-  tempInput.accept = 'image/*';
-  tempInput.style.display = 'none';
-  tempInput.addEventListener('change', (event) => {
-    handleFileInputChange(event);
-    document.body.removeChild(tempInput); // Clean up
-  });
-  document.body.appendChild(tempInput);
-  tempInput.click();
+fileInput.addEventListener("change", handleFileInputChange); 
+addImageBtn.addEventListener("click", (e) => { 
+  e.stopPropagation();
+  fileInput.click(); 
 });
+
+clearAllFiltersBtn.addEventListener("click", () => {
+  document.querySelectorAll('.image-card').forEach(card => {
+    const clearFiltersBtn = card.querySelector('.clear-filters-btn');
+    if (clearFiltersBtn) {
+      clearFiltersBtn.click();
+    }
+  });
+});
+
 
 // --- Global Slider Event Listeners ---
 
@@ -581,3 +727,6 @@ function setupGlobalSlider(globalSlider, globalValue, filterType) {
 setupGlobalSlider(globalLightenSlider, globalLightenValue, 'lighten');
 setupGlobalSlider(globalDarkenSlider, globalDarkenValue, 'darken');
 setupGlobalSlider(globalRotateSlider, globalRotateValue, 'rotate');
+setupGlobalSlider(globalBlurSlider, globalBlurValue, 'blur');
+setupGlobalSlider(globalThresholdSlider, globalThresholdValue, 'threshold');
+setupGlobalSlider(globalHueshiftSlider, globalHueshiftValue, 'hueshift');

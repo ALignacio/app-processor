@@ -40,11 +40,11 @@ async def process_image(file: UploadFile = File(...), operations: str = Form(...
         value = op.get("value")
 
         # Ensure image is BGR for color operations
-        if operation in ["lighten", "darken", "hue"] and len(processed.shape) == 2:
+        if operation in ["lighten", "darken", "hueshift"] and len(processed.shape) == 2:
             processed = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
 
         # Ensure image is grayscale for certain operations
-        if operation in ["threshold", "edge"] and len(processed.shape) == 3:
+        if operation in ["threshold", "edge_detection"] and len(processed.shape) == 3:
             processed = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
 
         if operation == "grayscale":
@@ -53,23 +53,32 @@ async def process_image(file: UploadFile = File(...), operations: str = Form(...
         elif operation == "blur":
             if len(processed.shape) == 2:
                 processed = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
-            blur_value = int(value) if value is not None and value > 0 else 15
+            blur_value = int(value) if value is not None else 15
+            if blur_value <= 0:
+                blur_value = 15
             if blur_value % 2 == 0:
                 blur_value += 1
             processed = cv2.GaussianBlur(processed, (blur_value, blur_value), 0)
-        elif operation == "edge":
+        elif operation == "edge_detection":
             processed = cv2.Canny(processed, 100, 200)
         elif operation == "threshold":
             _, processed = cv2.threshold(processed, 127, 255, cv2.THRESH_BINARY)
         elif operation == "resize":
-            processed = cv2.resize(processed, (200, 200))
+            if value and 'width' in value and 'height' in value:
+                width = int(value['width'])
+                height = int(value['height'])
+                if width > 0 and height > 0:
+                    processed = cv2.resize(processed, (width, height))
         elif operation == "rotate":
             (h, w) = processed.shape[:2]
             angle = float(value) if value is not None else 90
             M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
             processed = cv2.warpAffine(processed, M, (w, h))
         elif operation == "flip":
-            processed = cv2.flip(processed, 1)
+            if value == 'vertical':
+                processed = cv2.flip(processed, 0)
+            else: # default to horizontal
+                processed = cv2.flip(processed, 1)
         elif operation == "lighten":
             value = int(value) if value is not None else 50
             hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
@@ -84,10 +93,13 @@ async def process_image(file: UploadFile = File(...), operations: str = Form(...
             v = cv2.subtract(v, value)
             final_hsv = cv2.merge((h, s, v))
             processed = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
-        elif operation == "hue":
-            hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
-            hsv[:, :, 0] = (hsv[:, :, 0] + 30) % 180
-            processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        elif operation == "hueshift":
+            if value:
+                hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
+                # Frontend sends 0-360, OpenCV is 0-179
+                hue_shift = int(int(value) / 2)
+                hsv[:, :, 0] = (hsv[:, :, 0] + hue_shift) % 180
+                processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
         elif operation != "original":
             return JSONResponse(content={"error": f"Unknown operation: {operation}"}, status_code=400)
 

@@ -138,6 +138,18 @@ h1 {
   background-color: #2d2d2d;
 }
 
+.delete-btn {
+  background-color: #c9302c;
+}
+
+.delete-all-btn-container {
+  margin-bottom: 10px; /* Adds space between the buttons */
+}
+
+.clear-all-filters-btn-container {
+  margin-top: 10px;
+}
+
 .buttons-container {
   display: flex;
   flex-direction: column;
@@ -151,6 +163,7 @@ h1 {
 
 .clear-filters-btn {
   background-color: #4a4a4a;
+  margin-top: 10px;
 }
 
 .buttons-container button {

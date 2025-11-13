@@ -7,6 +7,7 @@
 </head>
 <body>
   <div class="app-container">      
+    <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" />
     <div class="toolbar">
       <h1>Image Processing App</h1>
     </div>
@@ -29,14 +30,34 @@
           <input type="range" id="global-rotate-slider" min="0" max="360" value="90">
           <span id="global-rotate-value">90</span>
         </div>
-        <button id="deleteAllBtn" style="display:none;">Delete All</button>
+        <div id="global-blur-controls" class="filter-controls" style="display:none;">
+          <label for="global-blur-slider">Blur All:</label>
+          <input type="range" id="global-blur-slider" min="1" max="99" value="15" step="2">
+          <span id="global-blur-value">15</span>
+        </div>
+        <div id="global-threshold-controls" class="filter-controls" style="display:none;">
+          <label for="global-threshold-slider">Threshold All:</label>
+          <input type="range" id="global-threshold-slider" min="0" max="255" value="127">
+          <span id="global-threshold-value">127</span>
+        </div>
+        <div id="global-hueshift-controls" class="filter-controls" style="display:none;">
+          <label for="global-hueshift-slider">Hue Shift All:</label>
+          <input type="range" id="global-hueshift-slider" min="0" max="360" value="180">
+          <span id="global-hueshift-value">180</span>
+        </div>
+        <div class="delete-all-btn-container">
+          <button id="deleteAllBtn" style="display:none;">Delete All</button>
+        </div>
         <button id="addImageBtn" style="display:none;">Add Image</button>
+        <div class="clear-all-filters-btn-container">
+          <button id="clearAllFiltersBtn" style="display:none;">Clear All Filters</button>
+        </div>
+
       </div>
 
       <div class="main-content">
         <div id="results" class="image-workspace empty-state">
-          <label class="drop-zone">
-            <input type="file" id="fileInput" multiple accept="image/*" />
+          <label for="fileInput" class="drop-zone">
             <p>Open an image to begin editing</p>
           </label>
         </div>
