@@ -3,9 +3,13 @@ const { jsPDF } = require('jspdf');
 const fileInput = document.getElementById("fileInput");
 const resultsDiv = document.getElementById("results");
 const exportPdfBtn = document.getElementById("exportPdfBtn");
+const downloadPdfFloatingBtn = document.getElementById("downloadPdfFloatingBtn");
 const addImageBtn = document.getElementById("addImageBtn");
 const deleteAllBtn = document.getElementById("deleteAllBtn");
 const clearAllFiltersBtn = document.getElementById("clearAllFiltersBtn");
+
+// Global variable to store the current PDF blob
+let currentPdfBlob = null;
 
 const globalLightenSlider = document.getElementById('global-lighten-slider');
 const globalLightenValue = document.getElementById('global-lighten-value');
@@ -30,6 +34,53 @@ const globalThresholdControls = document.getElementById('global-threshold-contro
 const globalHueshiftControls = document.getElementById('global-hueshift-controls');
 
 let currentImages = [];
+
+// Image modal close handlers
+const imageModal = document.getElementById('imageModal');
+const modalClose = document.querySelector('.image-modal-close');
+
+if (modalClose) {
+  modalClose.addEventListener('click', () => {
+    imageModal.style.display = 'none';
+  });
+}
+
+imageModal.addEventListener('click', (e) => {
+  if (e.target === imageModal) {
+    imageModal.style.display = 'none';
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && imageModal.style.display === 'flex') {
+    imageModal.style.display = 'none';
+  }
+});
+
+// Update grid layout based on number of items
+function updateGridLayout() {
+  const cardCount = resultsDiv.querySelectorAll('.image-card').length;
+  resultsDiv.className = 'image-workspace';
+  
+  if (cardCount === 0) {
+    resultsDiv.classList.add('empty-state');
+  } else if (cardCount === 1) {
+    resultsDiv.classList.add('single-item');
+  } else if (cardCount === 2) {
+    resultsDiv.classList.add('two-items');
+  } else if (cardCount === 3) {
+    resultsDiv.classList.add('three-items');
+  } else if (cardCount === 4) {
+    resultsDiv.classList.add('four-items');
+  } else if (cardCount === 5) {
+    resultsDiv.classList.add('five-items');
+  } else if (cardCount === 6) {
+    resultsDiv.classList.add('six-items');
+  } else {
+    resultsDiv.classList.add('many-items');
+  }
+}
 
 // Debounce function
 function debounce(func, delay) {
@@ -94,12 +145,50 @@ function createImageCard(file, originalBase64) {
   card.dataset.fileName = file.name;
   card.dataset.filters = JSON.stringify([]); // Store active filters here
 
-  // Images container
+  // Delete card button
+  const deleteCardBtn = document.createElement("button");
+  deleteCardBtn.className = "delete-card-btn";
+  deleteCardBtn.textContent = "✕";
+  deleteCardBtn.onclick = () => {
+    currentImages = currentImages.filter(img => img.card !== card);
+    card.remove();
+    updateGridLayout();
+  };
+  card.appendChild(deleteCardBtn);
+
+  // Images container (for Original and Processed side-by-side)
   const imagesContainer = document.createElement("div");
-  imagesContainer.style.display = "flex";
-  imagesContainer.style.gap = "20px";
-  imagesContainer.style.flexWrap = "wrap";
-  imagesContainer.style.justifyContent = "center";
+  imagesContainer.className = "images-container";
+  
+  // Add drag scrolling functionality
+  let isDragging = false;
+  let startX = 0;
+  let scrollLeft = 0;
+  
+  imagesContainer.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.pageX - imagesContainer.offsetLeft;
+    scrollLeft = imagesContainer.scrollLeft;
+    imagesContainer.style.cursor = 'grabbing';
+  });
+  
+  document.addEventListener('mouseleave', () => {
+    isDragging = false;
+    imagesContainer.style.cursor = 'grab';
+  });
+  
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+    imagesContainer.style.cursor = 'grab';
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - imagesContainer.offsetLeft;
+    const scroll = x - startX;
+    imagesContainer.scrollLeft = scrollLeft - scroll;
+  });
 
   // Original image
   const originalContainer = document.createElement("div");
@@ -119,8 +208,19 @@ function createImageCard(file, originalBase64) {
   processedLabel.textContent = "Processed";
   processedLabel.style.display = "none"; // Initially hide the processed label
   const processedImg = document.createElement("img");
-  processedImg.className = "processed-image";
+  processedImg.className = "processed-image clickable-image";
   processedImg.alt = "Processed";
+  processedImg.style.cursor = "pointer";
+  
+  // Add click handler to enlarge processed image
+  processedImg.addEventListener('click', (e) => {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    modalImg.src = processedImg.src;
+    modal.style.display = 'flex';
+    e.stopPropagation();
+  });
+  
   processedContainer.appendChild(processedLabel);
   processedContainer.appendChild(processedImg);
 
@@ -141,6 +241,10 @@ function createImageCard(file, originalBase64) {
   imagesContainer.appendChild(processedContainer);
   card.appendChild(imagesContainer);
 
+  // Scrollable section for filter options
+  const scrollableFiltersSection = document.createElement("div");
+  scrollableFiltersSection.className = "scrollable-filters-section";
+  
   // Filter checkboxes for this image
   const cardFiltersContainer = document.createElement("div");
   cardFiltersContainer.className = "filters-container";
@@ -161,10 +265,14 @@ function createImageCard(file, originalBase64) {
   clearFiltersBtn.textContent = "Clear Filters";
   clearFiltersBtn.className = "clear-filters-btn";
 
-  // Sliders container
+  scrollableFiltersSection.appendChild(cardFiltersContainer);
+
+  // Sliders container (inside scrollable section)
   const slidersContainer = document.createElement("div");
   slidersContainer.className = "sliders-container";
-  card.appendChild(slidersContainer);
+  scrollableFiltersSection.appendChild(slidersContainer);
+  
+  card.appendChild(scrollableFiltersSection);
 
   // Rotate slider
   const rotateControls = document.createElement("div");
@@ -260,7 +368,7 @@ function createImageCard(file, originalBase64) {
   // Edge Detection (no controls needed)
   // Grayscale (no controls needed)
 
-  // Download buttons container
+  // Download buttons container (fixed at bottom)
   const buttonsContainer = document.createElement("div");
   buttonsContainer.className = "buttons-container";
   
@@ -271,12 +379,11 @@ function createImageCard(file, originalBase64) {
 
   const deleteBtn = document.createElement("button");
   deleteBtn.textContent = "Delete";
-  deleteBtn.className = "delete-btn"; // Add a class for styling and identification
+  deleteBtn.className = "delete-btn";
 
-  buttonsContainer.appendChild(cardFiltersContainer);
-  buttonsContainer.appendChild(clearFiltersBtn);
   buttonsContainer.appendChild(downloadPngBtn);
   buttonsContainer.appendChild(downloadJpgBtn);
+  buttonsContainer.appendChild(clearFiltersBtn);
   buttonsContainer.appendChild(deleteBtn);
   card.appendChild(buttonsContainer);
 
@@ -539,6 +646,8 @@ async function handleFileInputChange(event) {
     currentImages.push({ file, card: imageCard });
   }
 
+  updateGridLayout();
+
   const hasImages = currentImages.length > 0;
   exportPdfBtn.style.display = hasImages ? "inline" : "none";
   deleteAllBtn.style.display = hasImages ? "block" : "none";
@@ -554,7 +663,7 @@ deleteAllBtn.addEventListener("click", () => {
       <p>Open an image to begin editing</p>
     </label>
   `;
-  resultsDiv.classList.add("empty-state");
+  resultsDiv.className = "image-workspace empty-state";
   exportPdfBtn.style.display = "none";
   deleteAllBtn.style.display = "none";
   addImageBtn.style.display = "none";
@@ -575,6 +684,15 @@ exportPdfBtn.addEventListener("click", async () => {
   const imageCards = document.querySelectorAll('.image-card');
   let imageCount = 0;
 
+  // Add title on the first page
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(24);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const titleX = pageWidth / 2;
+  doc.text("Image Processing App By Team 12", titleX, 15, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+
   for (const card of imageCards) {
     const originalImg = card.querySelector('.image-container:first-child img');
     const processedImg = card.querySelector('.processed-image');
@@ -584,33 +702,25 @@ exportPdfBtn.addEventListener("click", async () => {
     if (processedImg && processedImg.src && processedImg.src.includes('base64')) {
       if (imageCount > 0) doc.addPage();
 
-      doc.text(`Image: ${fileName}`, 10, 10);
-      doc.text("Original Image", 10, 20);
-      
-      const appliedFilters = filters.map(f => {
-        if (f.value) {
-          if (typeof f.value === 'object') {
-            return `${f.name}: ${JSON.stringify(f.value)}`;
-          }
-          return `${f.name}: ${f.value}`;
-        }
-        return f.name;
-      }).join(', ');
-
-      doc.text(`Processed Image`, 105, 20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Original Image", 10, 40);
+      doc.text("Processed Image", 105, 40);
+      doc.setFont("helvetica", "normal");
 
       try {
         // Calculate aspect ratio for original image
         const origHeight = (originalImg.naturalHeight * 85) / originalImg.naturalWidth;
-        doc.addImage(originalImg.src, 'PNG', 10, 30, 85, origHeight);
+        doc.addImage(originalImg.src, 'PNG', 10, 50, 85, origHeight);
 
         // Calculate aspect ratio for processed image
         const procHeight = (processedImg.naturalHeight * 85) / processedImg.naturalWidth;
-        doc.addImage(processedImg.src, 'PNG', 105, 30, 85, procHeight);
+        doc.addImage(processedImg.src, 'PNG', 105, 50, 85, procHeight);
 
         // Add filter details
-        let filterY = 30 + Math.max(origHeight, procHeight) + 10;
+        let filterY = 50 + Math.max(origHeight, procHeight) + 10;
+        doc.setFont("helvetica", "bold");
         doc.text("Applied Filters:", 10, filterY);
+        doc.setFont("helvetica", "normal");
         filters.forEach(filter => {
           filterY += 7;
           let filterText = `- ${filter.name}`;
@@ -624,6 +734,18 @@ exportPdfBtn.addEventListener("click", async () => {
           doc.text(filterText, 15, filterY);
         });
 
+        // Add team members
+        let membersY = filterY + 15;
+        doc.setFont("helvetica", "bold");
+        doc.text("Team Members:", 10, membersY);
+        doc.setFont("helvetica", "normal");
+        membersY += 7;
+        doc.text("Ronard Ramos", 15, membersY);
+        membersY += 7;
+        doc.text("Jeffrey Revilla", 15, membersY);
+        membersY += 7;
+        doc.text("Andrei Ignacio", 15, membersY);
+
         imageCount++;
       } catch (e) {
         console.error("Error adding image to PDF:", e);
@@ -633,16 +755,31 @@ exportPdfBtn.addEventListener("click", async () => {
     }
   }
 
+  // Add date and time at the bottom of the last page
   if (imageCount > 0) {
+    const now = new Date();
+    const dateTimeString = now.toLocaleString();
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.text(`Processed on: ${dateTimeString}`, 10, pageHeight - 10);
+
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
+
+    // Store the blob globally for download
+    currentPdfBlob = pdfBlob;
+    console.log("PDF blob created and stored:", currentPdfBlob);
 
     const pdfFrame = document.getElementById("pdfFrame");
     pdfFrame.src = pdfUrl;
 
     const pdfPreview = document.getElementById("pdfPreview");
     pdfPreview.style.display = "block";
-    pdfPreview.dataset.pdfBlob = pdfUrl;
+    
+    // Hide the Export PDF button and show the Download PDF button
+    exportPdfBtn.style.display = "none";
+    downloadPdfFloatingBtn.style.display = "inline";
   } else {
     alert("No processed images to export!");
   }
@@ -652,14 +789,66 @@ exportPdfBtn.addEventListener("click", async () => {
 });
 
 const downloadPdfBtn = document.getElementById("downloadPdfBtn");
-downloadPdfBtn.addEventListener("click", () => {
-  const pdfPreview = document.getElementById("pdfPreview");
-  const pdfUrl = pdfPreview.dataset.pdfBlob;
-  if (pdfUrl) {
-    const link = document.createElement("a");
-    link.href = pdfUrl;
-    link.download = "processed_images_report.pdf";
-    link.click();
+downloadPdfBtn.addEventListener("click", async () => {
+  console.log("Download button clicked");
+  console.log("currentPdfBlob:", currentPdfBlob);
+  
+  if (currentPdfBlob) {
+    try {
+      // Create a temporary download link
+      const url = window.URL.createObjectURL(currentPdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Image_Processing_Report_Team12.pdf';
+      document.body.appendChild(link);
+      
+      console.log("Triggering download...");
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log("Download triggered successfully");
+      alert("PDF download started!");
+    } catch (error) {
+      console.error("Error during download:", error);
+      alert("Error downloading PDF: " + error.message);
+    }
+  } else {
+    alert("No PDF to download. Please export a PDF first.");
+  }
+});
+
+// Add event listener for floating download button
+downloadPdfFloatingBtn.addEventListener("click", async () => {
+  console.log("Floating download button clicked");
+  console.log("currentPdfBlob:", currentPdfBlob);
+  
+  if (currentPdfBlob) {
+    try {
+      // Create a temporary download link
+      const url = window.URL.createObjectURL(currentPdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Image_Processing_Report_Team12.pdf';
+      document.body.appendChild(link);
+      
+      console.log("Triggering download...");
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log("Download triggered successfully");
+      alert("PDF download started!");
+    } catch (error) {
+      console.error("Error during download:", error);
+      alert("Error downloading PDF: " + error.message);
+    }
+  } else {
+    alert("No PDF to download. Please export a PDF first.");
   }
 });
 
@@ -667,6 +856,10 @@ const exitPdfPreviewBtn = document.getElementById("exitPdfPreviewBtn");
 exitPdfPreviewBtn.addEventListener("click", () => {
   const pdfPreview = document.getElementById("pdfPreview");
   pdfPreview.style.display = "none";
+  
+  // Show the Export PDF button again and hide the Download button
+  exportPdfBtn.style.display = "inline";
+  downloadPdfFloatingBtn.style.display = "none";
 });
 
 fileInput.addEventListener("change", handleFileInputChange); 

@@ -9,50 +9,57 @@
   <div class="app-container">      
     <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" />
     <div class="toolbar">
-      <h1>Image Processing App</h1>
+      <h1>EDITOR NI RUNARD</h1>
     </div>
 
     <div class="workspace">
       <div class="sidebar">
-        <h3>Global Controls</h3>
-        <div id="global-lighten-controls" class="filter-controls" style="display:none;">
-          <label for="global-lighten-slider">Lighten All:</label>
-          <input type="range" id="global-lighten-slider" min="0" max="100" value="50">
-          <span id="global-lighten-value">50</span>
-        </div>
-        <div id="global-darken-controls" class="filter-controls" style="display:none;">
-          <label for="global-darken-slider">Darken All:</label>
-          <input type="range" id="global-darken-slider" min="0" max="100" value="50">
-          <span id="global-darken-value">50</span>
-        </div>
-        <div id="global-rotate-controls" class="filter-controls" style="display:none;">
-          <label for="global-rotate-slider">Rotate All:</label>
-          <input type="range" id="global-rotate-slider" min="0" max="360" value="90">
-          <span id="global-rotate-value">90</span>
-        </div>
-        <div id="global-blur-controls" class="filter-controls" style="display:none;">
-          <label for="global-blur-slider">Blur All:</label>
-          <input type="range" id="global-blur-slider" min="1" max="99" value="15" step="2">
-          <span id="global-blur-value">15</span>
-        </div>
-        <div id="global-threshold-controls" class="filter-controls" style="display:none;">
-          <label for="global-threshold-slider">Threshold All:</label>
-          <input type="range" id="global-threshold-slider" min="0" max="255" value="127">
-          <span id="global-threshold-value">127</span>
-        </div>
-        <div id="global-hueshift-controls" class="filter-controls" style="display:none;">
-          <label for="global-hueshift-slider">Hue Shift All:</label>
-          <input type="range" id="global-hueshift-slider" min="0" max="360" value="180">
-          <span id="global-hueshift-value">180</span>
-        </div>
-        <div class="delete-all-btn-container">
-          <button id="deleteAllBtn" style="display:none;">Delete All</button>
-        </div>
-        <button id="addImageBtn" style="display:none;">Add Image</button>
-        <div class="clear-all-filters-btn-container">
-          <button id="clearAllFiltersBtn" style="display:none;">Clear All Filters</button>
+        <div class="sidebar-header">
+          <h3>GLOBAL CONTROLS</h3>
         </div>
 
+        <div class="sidebar-scrollable">
+          <div id="global-lighten-controls" class="filter-controls" style="display:none;">
+            <label for="global-lighten-slider">Lighten All:</label>
+            <input type="range" id="global-lighten-slider" min="0" max="100" value="50">
+            <span id="global-lighten-value">50</span>
+          </div>
+          <div id="global-darken-controls" class="filter-controls" style="display:none;">
+            <label for="global-darken-slider">Darken All:</label>
+            <input type="range" id="global-darken-slider" min="0" max="100" value="50">
+            <span id="global-darken-value">50</span>
+          </div>
+          <div id="global-rotate-controls" class="filter-controls" style="display:none;">
+            <label for="global-rotate-slider">Rotate All:</label>
+            <input type="range" id="global-rotate-slider" min="0" max="360" value="90">
+            <span id="global-rotate-value">90</span>
+          </div>
+          <div id="global-blur-controls" class="filter-controls" style="display:none;">
+            <label for="global-blur-slider">Blur All:</label>
+            <input type="range" id="global-blur-slider" min="1" max="99" value="15" step="2">
+            <span id="global-blur-value">15</span>
+          </div>
+          <div id="global-threshold-controls" class="filter-controls" style="display:none;">
+            <label for="global-threshold-slider">Threshold All:</label>
+            <input type="range" id="global-threshold-slider" min="0" max="255" value="127">
+            <span id="global-threshold-value">127</span>
+          </div>
+          <div id="global-hueshift-controls" class="filter-controls" style="display:none;">
+            <label for="global-hueshift-slider">Hue Shift All:</label>
+            <input type="range" id="global-hueshift-slider" min="0" max="360" value="180">
+            <span id="global-hueshift-value">180</span>
+          </div>
+        </div>
+
+        <div class="sidebar-fixed">
+          <div class="delete-all-btn-container">
+            <button id="deleteAllBtn" style="display:none;">Delete All</button>
+          </div>
+          <button id="addImageBtn" style="display:none;">Add Image</button>
+          <div class="clear-all-filters-btn-container">
+            <button id="clearAllFiltersBtn" style="display:none;">Clear All Filters</button>
+          </div>
+        </div>
       </div>
 
       <div class="main-content">
@@ -65,12 +72,23 @@
     </div>
 
     <button id="exportPdfBtn" class="floating-export-btn" style="display:none;">Export PDF</button>
+    <button id="downloadPdfFloatingBtn" class="floating-export-btn" style="display:none; margin-left: 10px;">Download PDF</button>
 
     <div id="pdfPreview" style="display:none; margin-top: 2rem;">
       <h2>PDF Report Preview</h2>
       <button id="exitPdfPreviewBtn">Exit Preview</button>
       <iframe id="pdfFrame" width="100%" height="600px" style="border: 1px solid #ccc;"></iframe>
-      <button id="downloadPdfBtn" style="margin-top: 1rem;">Download PDF</button>
+      <div style="display: flex; gap: 10px; margin-top: 1rem; justify-content: center;">
+        <button id="downloadPdfBtn">Download PDF</button>
+      </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imageModal" class="image-modal" style="display: none;">
+      <div class="image-modal-content">
+        <span class="image-modal-close">&times;</span>
+        <img id="modalImage" src="" alt="Enlarged Preview" class="modal-image" />
+      </div>
     </div>
   </div>
 
